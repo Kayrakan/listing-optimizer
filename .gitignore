@@ -1,0 +1,13 @@
+# Root ignore for generated and environment-specific files
+# Reference api/.gitignore and extension/.gitignore for additional project rules
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Runtime storage
+storage/
+
+# Environment variables
+.env*
+
