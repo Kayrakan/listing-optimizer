@@ -116,6 +116,16 @@ listing-optimizer/                 ← single GitHub repo (main branch)
     └─ api-ci.yml         # PHPUnit + Forge deploy on api/**
 
 ============================================================================
+Extension Setup
+============================================================================
+Create `extension/.env` with:
+
+```
+VITE_EDGE_BASE=http://localhost:8787
+VITE_STRIPE_KEY=pk_test_...
+```
+
+============================================================================
 F.  ENV & CONSTANTS (reference)
 ============================================================================
 Edge Worker vars   : SUPABASE_URL, SUPABASE_JWK_CACHE_MIN=15,
