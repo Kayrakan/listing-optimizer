@@ -1,3 +1,6 @@
 {
-  "extends": "plasmo/templates/tsconfig-base"
+  "extends": "plasmo/templates/tsconfig-base",
+  "include": [
+    ".plasmo/index.d.ts"
+  ]
 }
