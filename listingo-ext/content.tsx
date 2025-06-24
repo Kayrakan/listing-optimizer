@@ -1,8 +1,13 @@
+import cssText from "data-text:~style.css"
 import { useReducer } from "react"
 
-import "./style.css"
+export const getStyle = () => {
+    const style = document.createElement("style")
+    style.textContent = cssText
+    return style
+}
 
-function IndexPopup() {
+const PlasmoOverlay = () => {
     const [count, increase] = useReducer((c) => c + 1, 0)
 
     return (
@@ -18,4 +23,4 @@ function IndexPopup() {
     )
 }
 
-export default IndexPopup
+export default PlasmoOverlay
