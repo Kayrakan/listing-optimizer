@@ -1,13 +1,13 @@
 {
   "private": true,
   "workspaces": [
-    "extension",
+    "listingo-ext",
     "edge-api",
     "shared"
   ],
   "scripts": {
     "dev": "npm-run-all -p dev:ext dev:edge dev:api",
-    "dev:ext": "npm --workspace @lo/extension run dev",
+    "dev:ext": "npm --workspace @lo/listingo-ext run dev",
     "dev:edge": "npm --workspace @lo/edge-api run dev",
     "dev:api": "cd api && php artisan serve --host=0.0.0.0 --port=8000",
     "lint": "npm-run-all lint:*",
