@@ -1,20 +1,19 @@
 # AI Listing-Optimizer – Project Charter & Technical Blueprint
-Revision 1 – June 2025 (workspaces + Makefile edition)
+Revision 2 – July 2025 (current repo layout)
 
-## 0 What we’re building
-A Chrome/Edge browser extension that bulk-rewrites marketplace listings with GPT-4o-mini, lets the seller review and one-click-patch the live listing, and charges per successful patch.
-Target: ≤ 400 ms median turnaround, > 100 000 listings / hour sustained, launchable by a two-person team.
+## 0 What we're building
+A Chrome/Edge browser extension that bulk-rewrites marketplace listings with GPT-4o-mini, lets the seller review and one-click patch the live listing, and charges per successful patch. Target: ≤ 400 ms median turnaround and over 100,000 listings per hour, all by a two-person team.
 
 ## 1 Layer-by-layer architecture
 
 | Layer | Runtime | Main responsibilities | Why this pick |
 | --- | --- | --- | --- |
-| Client | Plasmo (MV3) · React 18 · Tailwind · Zustand | Popup & side-panel UI, JWT storage, calls /scan /result /patch, opens Stripe Checkout | Rich UX, hot-reload, Manifest v3 scaffolding |
+| Client | Plasmo (MV3) · React 18 · Tailwind · Zustand | Popup & side-panel UI, JWT storage, calls `/scan` `/result` `/patch`, opens Stripe Checkout | Rich UX, hot-reload, Manifest v3 scaffolding |
 | Edge | Cloudflare Workers + Hono router · Cloudflare Queues | Verify JWT → enqueue SCAN_Q → GPT_Q → PATCH_Q, persist GPT answer, return status | POP-level latency, autoscale, DLQ |
-| Core | Laravel 11 on Forge (PHP-FPM for now; Octane optional later) | Guest-token issuance, OAuth2 redirects, Stripe Cashier metered billing, /api/usage, /api/quota | Cashier + Socialite = quickest path to compliant billing |
-| Database | CockroachDB Serverless (eu-central) | users, jobs tables; RLS user_id = jwt.sub | Horizontal writes, Postgres driver for JS & PHP |
+| Core | Laravel 11 on Forge (PHP-FPM for now) | Guest-token issuance, OAuth2 redirects, Stripe Cashier metered billing, `/api/usage`, `/api/quota` | Cashier + Socialite = quickest path to compliant billing |
+| Database | CockroachDB Serverless (eu-central) | `users` and `jobs` tables; RLS `user_id = jwt.sub` | Horizontal writes, Postgres driver for JS & PHP |
 | Auth | Supabase magic-link → RS256 JWT | Zero password UX; JWT can be verified in both Worker & Laravel |
-| AI | OpenAI GPT-4o-mini via fetch SDK | 200-300 ms result; can swap to Fly GPU batch later |
+| AI | OpenAI GPT-4o-mini via fetch SDK | 200–300 ms result; can swap to Fly GPU batch later |
 | Payments | Stripe Checkout + Customer Portal | Comply with Chrome Web Store “free only” policy |
 
 ## Request flow (one optimisation)
@@ -31,60 +30,57 @@ PATCH consumer ─▶ Etsy PATCH ─▶ status='patched'
                      └─ POST /api/usage (Laravel) ─▶ Stripe usage +1
 ```
 
-## 2 Monorepo layout with npm workspaces
+## 2 Repository structure
 
-```ruby
+```text
 listing-optimizer/
-├── package.json           # root, defines workspaces & lint / build scripts
+├── package.json           # root workspaces & helper scripts
 ├── Makefile               # make dev · make lint · make build · make seed
 │
-├─ extension/              # Plasmo browser add-on  (@lo/extension)
-│   ├─ src/                # popup.tsx · sidePanel.tsx · hooks
-│   ├─ manifest.ts
-│   ├─ tailwind.config.cjs
+├─ listingo-ext/           # Plasmo browser extension (@lo/listingo-ext)
+│   ├─ popup.tsx · content.tsx · options.tsx
+│   ├─ tailwind.config.js
 │   └─ package.json
 │
 ├─ edge-api/               # Cloudflare Workers project (@lo/edge-api)
-│   ├─ src/
-│   │   ├─ router.ts       # /scan /result /patch
-│   │   ├─ consumers/
-│   │   │     scan.ts
-│   │   │     gpt.ts
-│   │   │     patch.ts
-│   │   └─ utils/crypto.ts · openai.ts · jwt.ts
+│   ├─ src/router.ts       # /scan /result /patch
+│   ├─ src/consumers/      # scan.ts · gpt.ts · patch.ts
+│   ├─ src/utils/          # crypto.ts · openai.ts · jwt.ts
 │   ├─ wrangler.toml
-│   └─ .dev.vars           # SUPABASE_URL, OPENAI_KEY, CR_DB_URL, …
+│   └─ pnpm-lock.yaml
 │
-├─ api/                    # Laravel (Stripe, OAuth)
-│   ├─ app/  routes/  database/
+├─ listingo-app/           # Laravel backend (Stripe, OAuth)
+│   ├─ app/ routes/ database/
 │   ├─ composer.json
-│   ├─ Dockerfile          # for CI build
-│   └─ .env.example
+│   ├─ package.json        # vite + tailwind for frontend
+│   └─ README.md
 │
-├─ shared/                 # code imported by TS on both sides
-│   ├─ schema.ts           # drizzle schema for users + jobs
+├─ shared/                 # code shared by extension and workers
+│   ├─ schema.ts           # drizzle schema
 │   ├─ prompts.ts          # GPT template strings
-│   └─ types.ts            # JobRow, JwtClaims, etc.
+│   └─ types.ts            # JobRow, JwtClaims, …
 │
 ├─ scripts/                # dev & helper tooling
-│   ├─ dev.sh              # spin Miniflare + Octane + Plasmo (called by make dev)
-│   └─ seed-db.ts          # fill Cockroach with dummy users/listings
+│   ├─ dev.sh              # spin Miniflare + Laravel + Plasmo
+│   └─ seed-db.ts          # fill CockroachDB with dummy data
 │
-├─ infra/                  # ops artefacts
-│   ├─ forge-deploy.sh     # composer install → migrate → queue:restart
+├─ infra/                  # operational artefacts
+│   ├─ forge-deploy.sh
 │   └─ grafana-dashboard.json
 │
 └─ .github/workflows/
-    ├─ extension-ci.yml    # root npm ci && npm --workspace @lo/extension run build
-    ├─ edge-ci.yml         # root npm ci && wrangler publish
-    └─ api-ci.yml          # composer install && phpunit && forge deploy
+    ├─ extension-ci.yml
+    ├─ edge-ci.yml
+    └─ api-ci.yml
 ```
+
+### Root `package.json`
 
 ```json
 {
   "private": true,
   "workspaces": [
-    "extension",
+    "listingo-ext",
     "edge-api",
     "shared"
   ],
@@ -93,9 +89,9 @@ listing-optimizer/
     "dev": "npm-run-all -p dev:ext dev:edge dev:api",
 
     /* ---------- INDIVIDUAL DEV TASKS ---------- */
-    "dev:ext":  "npm --workspace @lo/extension  run dev",    // Plasmo HMR on :9999
-    "dev:edge": "npm --workspace @lo/edge-api   run dev",    // Miniflare on :8787
-    "dev:api":  "cd api && php artisan serve --host=0.0.0.0 --port=8000",
+    "dev:ext":  "npm --workspace @lo/listingo-ext run dev",    // Plasmo HMR on :9999
+    "dev:edge": "npm --workspace @lo/edge-api   run dev",      // Miniflare on :8787
+    "dev:api":  "cd listingo-app && php artisan serve --host=0.0.0.0 --port=8000",
 
     /* ---------- QUALITY & BUILD ---------- */
     "lint":     "npm-run-all lint:*",
@@ -118,7 +114,7 @@ dev:          ## start edge, extension, Laravel
 
 lint:         ## run ESLint + PHP Pint
 npm run lint
-cd api && ./vendor/bin/pint
+cd listingo-app && ./vendor/bin/pint
 
 build: build-edge build-ext
 
@@ -126,7 +122,7 @@ build-edge:
 npm --workspace @lo/edge-api run build
 
 build-ext:
-npm --workspace @lo/extension run build
+npm --workspace @lo/listingo-ext run build
 
 seed:
 pnpm ts-node scripts/seed-db.ts
@@ -143,8 +139,8 @@ pnpm ts-node scripts/seed-db.ts
 
 | Area | Default | Scale-out path |
 | --- | --- | --- |
-| Droplet CPU | 1 GB / 1 vCPU · PHP-FPM | Enable Octane (Swoole) when /api/usage hits >100 RPS |
-| Queues | Cloudflare free tier (up to 100 k msgs/day) | Paid Queue + GPU batch on Fly Machines |
+| Droplet CPU | 1 GB / 1 vCPU · PHP-FPM | Enable Octane (Swoole) when `/api/usage` hits >100 RPS |
+| Queues | Cloudflare free tier (100k msgs/day) | Paid Queue + GPU batch on Fly Machines |
 | Database | Cockroach Serverless (5 GB free) | Upgrade to paid; multi-region gateway when US traffic grows |
 | Monitoring | Grafana Cloud (Logpush) | Add Datadog if >10 containers later |
 
@@ -155,7 +151,7 @@ pnpm ts-node scripts/seed-db.ts
 | 1 | Guest JWT + Scan/Result demo |
 | 3 | Stripe upgrade flips quota, CI pipelines green |
 | 4 | Optional GPU batch, Grafana live |
-| 6 | Chrome Web Store beta w/ real billing |
+| 6 | Chrome Web Store beta with real billing |
 
 ## 6 Why this configuration is “best value”
 
@@ -163,9 +159,8 @@ Edge owns speed → sub-400 ms listing loop, autoscale queues.
 
 Laravel owns money → Stripe Cashier + Socialite in one composer line.
 
-Workspaces & Makefile → clone → npm i → make dev; new dev productive in minutes.
+Workspaces & Makefile → clone → `npm i` → `make dev`; new dev productive in minutes.
 
 Cockroach → one source of truth for both JS and PHP.
 
 Guest-token pattern → zero signup friction; Stripe handles verified identity.
-
