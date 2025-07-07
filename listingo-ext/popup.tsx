@@ -47,73 +47,96 @@ export default function Popup() {
 
     /* UI ------------------------------------------------------------------- */
     return (
-        <div className="w-[96vw] max-w-[380px] bg-base-00 min-h-[560px] p-4 flex flex-col gap-4 text-base-90">
+        <div className="w-[96vw] max-w-[380px] bg-gradient-to-b from-base-00 to-base-05 min-h-[560px] flex flex-col text-base-90 shadow-lg">
             {/* Header */}
-            <header className="flex items-center justify-between">
-                <h1 className="text-sm font-semibold tracking-wide uppercase text-base-70">
+            <header className="bg-base-10 p-4 border-b border-base-20 flex items-center justify-between">
+                <h1 className="text-base font-bold tracking-wide uppercase text-base-90">
                     AI Listing-Optimizer
                 </h1>
                 <QuotaBadge plan={plan} remaining={remaining}/>
             </header>
 
-            {/* Scan section */}
-            <section className="flex flex-col gap-3">
-                <label className="text-xs text-base-70">Listings to scan</label>
-                <input
-                    type="number"
-                    min={1}
-                    max={200}
-                    value={limit}
-                    disabled={busy}
-                    onChange={e => setLimit(+e.target.value)}
-                    className="border border-base-30 rounded-xl px-3 py-[6px] text-sm outline-none
-                     focus:border-accent focus:ring-2 focus:ring-accent/30 transition"
-                />
+            {/* Main Content */}
+            <div className="flex-1 p-6 flex flex-col gap-6">
+                {/* Scan section */}
+                <section className="bg-base-05 rounded-xl p-5 shadow-sm border border-base-20">
+                    <h2 className="text-base font-semibold mb-4">Scan Your Listings</h2>
 
-                <button
-                    disabled={busy}
-                    onClick={startScan}
-                    className="rounded-pill bg-accent hover:bg-accent-hover active:scale-[.97] disabled:opacity-50
-                     text-base-00 flex items-center justify-center gap-1 py-[10px] transition">
-                    {busy ? <RefreshCcw className="animate-spin h-4" /> : null}
-                    Scan {limit}
-                </button>
-            </section>
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm text-base-70 font-medium">Number of listings to scan</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={200}
+                                    value={limit}
+                                    disabled={busy}
+                                    onChange={e => setLimit(+e.target.value)}
+                                    className="w-full border-2 border-base-30 rounded-lg px-4 py-3 text-base outline-none
+                                    focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all"
+                                />
+                            </div>
+                        </div>
 
-            <hr className="border-base-30" />
+                        <button
+                            disabled={busy}
+                            onClick={startScan}
+                            className="mt-2 rounded-lg bg-accent hover:bg-accent-hover active:scale-[.98] disabled:opacity-50
+                            text-base-00 flex items-center justify-center gap-2 py-3 font-semibold text-base shadow-sm transition-all">
+                            {busy ? (
+                                <>
+                                    <RefreshCcw className="animate-spin h-5 w-5" />
+                                    Scanning...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="inline-block">Scan {limit} Listings</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </section>
 
-            {/* Plan / upgrade */}
-            <section className="flex flex-col gap-2 text-sm">
-                <p>
-                    Plan:&nbsp;
-                    <span className="font-medium capitalize">{plan}</span>
-                    &nbsp;·&nbsp;
-                    {remaining > 0 ? (
-                        <span className="text-base-70">{remaining} left</span>
-                    ) : (
-                        <span className="text-error">0 left</span>
-                    )}
-                </p>
+                {/* Plan / upgrade */}
+                <section className="bg-base-05 rounded-xl p-5 shadow-sm border border-base-20">
+                    <h2 className="text-base font-semibold mb-4">Your Plan</h2>
 
-                {plan === "guest" ? (
-                    <button
-                        onClick={upgrade}
-                        className="rounded-pill border border-accent text-accent hover:bg-accent-subtle
-                       flex items-center justify-center gap-1 py-[8px] transition">
-                        Upgrade
-                        <ArrowRight className="h-4 w-4" />
-                    </button>
-                ) : (
-                    <button
-                        onClick={logout}
-                        className="text-xs text-base-70 hover:text-base-90 self-start">
-                        Logout
-                    </button>
-                )}
-            </section>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between p-3 bg-base-10 rounded-lg">
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium capitalize text-base">{plan}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {remaining > 0 ? (
+                                    <span className="text-base-70 font-medium">{remaining} listings left</span>
+                                ) : (
+                                    <span className="text-error font-medium">0 listings left</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {plan === "guest" ? (
+                            <button
+                                onClick={upgrade}
+                                className="rounded-lg bg-accent hover:bg-accent-hover text-base-00
+                                flex items-center justify-center gap-2 py-3 font-semibold shadow-sm transition-all">
+                                Upgrade to Pro
+                                <ArrowRight className="h-5 w-5" />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={logout}
+                                className="text-sm text-base-70 hover:text-base-90 hover:underline self-start transition-colors">
+                                Logout
+                            </button>
+                        )}
+                    </div>
+                </section>
+            </div>
 
             {/* Footer */}
-            <footer className="mt-auto text-[11px] text-base-30">
+            <footer className="bg-base-10 p-4 text-sm text-base-50 text-center border-t border-base-20">
                 © {new Date().getFullYear()} Listing-Optimizer
             </footer>
         </div>
