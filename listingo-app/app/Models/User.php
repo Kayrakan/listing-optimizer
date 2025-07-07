@@ -6,21 +6,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+
+    /** --------------------------------------------------------------------
+     *  Primary-key behaviour for Cockroach
+     * ------------------------------------------------------------------ */
+    protected $primaryKey = 'uuid';
+    public    $incrementing = false;
+    protected $keyType = 'string';
+
+    /** Fillable / guarded columns */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'uuid', 'email', 'password', 'plan', 'quota_remaining',
     ];
 
     /**
@@ -38,6 +41,19 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+
+
+    /** Auto-generate UUID on create */
+    protected static function booted(): void
+    {
+        static::creating(function (self $user) {
+            if (empty($user->{$user->getKeyName()})) {
+                $user->{$user->getKeyName()} = (string) Str::uuid();
+            }
+        });
+    }
+
+
     protected function casts(): array
     {
         return [

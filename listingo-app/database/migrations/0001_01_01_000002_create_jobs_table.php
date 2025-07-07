@@ -9,16 +9,18 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+    public $withinTransaction = false;   //  ← no type-hint here
+
     public function up(): void
     {
         Schema::create('jobs', function (Blueprint $table) {
-            $table->id();
+            $table->id();                                 // fine for Cockroach
             $table->string('queue')->index();
             $table->longText('payload');
-            $table->unsignedTinyInteger('attempts');
-            $table->unsignedInteger('reserved_at')->nullable();
-            $table->unsignedInteger('available_at');
-            $table->unsignedInteger('created_at');
+            $table->smallInteger('attempts');              // remove unsigned
+            $table->integer('reserved_at')->nullable();   // remove unsigned
+            $table->integer('available_at');
+            $table->integer('created_at');
         });
 
         Schema::create('job_batches', function (Blueprint $table) {

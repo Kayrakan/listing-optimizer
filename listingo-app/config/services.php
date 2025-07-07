@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+
+    'supabase' => [
+        'url'          => env('SUPABASE_PROJECT_URL'),
+        'service_role' => env('SUPABASE_SERVICE_ROLE'),
+        'jwk'          => env('SUPABASE_JWK_URL'),
+    ],
+
+    'stripe' => [
+        'secret'         => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
 ];

@@ -1,2 +1,40 @@
 name = "listing-edge"
 main = "./src/router.ts"
+
+
+name = "lo-edge-router"
+main = "src/router.ts"
+compatibility_date = "2025-07-01"
+
+# HTTP worker bindings
+[[d1_databases]]
+binding = "DB"
+database_name = "lo-prod"
+database_id = "xxxx..."
+
+[[kv_namespaces]]
+binding = "JWK_CACHE"
+id = "yyyy..."
+
+[[queues.producers]]
+binding = "SCAN_Q"
+queue = "scan-q"
+
+[[queues.consumers]]
+script = "scan-worker"
+queue  = "scan-q"
+
+[[queues.consumers]]
+script = "gpt-worker"
+queue  = "gpt-q"
+
+[[queues.consumers]]
+script = "patch-worker"
+queue  = "patch-q"
+
+[build.upload]
+format = "modules"
+
+# secondary script entries
+[build]
+command = "tsx src/consumers/scan.ts --outfile build/scan-worker.mjs"
