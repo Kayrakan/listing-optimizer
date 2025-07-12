@@ -27,6 +27,7 @@ export const useInitAuth = () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" }   // body is empty but ok
             }).then(r => r.json())
+            console.log(token);
             setJwt(token)
         }
 
