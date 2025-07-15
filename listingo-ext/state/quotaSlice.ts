@@ -5,6 +5,8 @@ import type { Store } from "./index"
 export interface QuotaSlice {
     remaining: number
     refresh: () => Promise<void>
+    setRemaining: (n: number) => void          // ◀︎ new
+
 }
 
 // --- slice factory ------------------------------------------------------
@@ -15,6 +17,7 @@ export const createQuotaSlice: StateCreator<
     QuotaSlice
 > = (set, get) => ({
     remaining: 0,
+    setRemaining: (n) => set({ remaining: n }),   // ◀︎ new
 
     async refresh() {
         const jwt = get().jwt                              // from authSlice

@@ -61,6 +61,16 @@ export default function Popup() {
     }, [tabs])
 
 
+    useEffect(() => {
+        const handler = (msg: any) => {
+            if (msg.type === 'supabase-sign-in' && typeof msg.credits === 'number') {
+                useStore.getState().setRemaining(msg.credits)
+            }
+        }
+        chrome.runtime.onMessage.addListener(handler)
+        return () => chrome.runtime.onMessage.removeListener(handler)
+    }, [])
+
     /* 4. actions */
     const startScan = async () => {
         setBusy(true)
@@ -175,6 +185,15 @@ export default function Popup() {
                         Logout
                     </button>
                 )}
+                {plan === 'pro' && (
+                    <button
+                        onClick={() => buyCredits(10, supabase.auth.getUser()?.email!)}
+                        className="ml-2 rounded bg-accent px-2 py-1 text-xs text-base-00"
+                    >
+                        + $10 Credits
+                    </button>
+                )}
+
             </footer>
         </div>
     )

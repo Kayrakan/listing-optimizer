@@ -23,7 +23,7 @@ class User extends Authenticatable
 
     /** Fillable / guarded columns */
     protected $fillable = [
-        'uuid', 'email', 'password', 'plan', 'quota_remaining',
+        'uuid', 'email', 'password', 'plan', 'quota_remaining', 'credits', 'stripe_customer_id'
     ];
 
     /**

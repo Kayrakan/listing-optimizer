@@ -13,33 +13,59 @@ class StripeWebhookController extends Controller
 {
     //
 
-    public function handle($event): void
+    public function handle(Request $req)
     {
-        if ($event->payload['type'] !== 'checkout.session.completed') {
-            return;
+        $event = Webhook::constructEvent(
+            $req->getContent(),
+            $req->header('Stripe-Signature'),
+            env('STRIPE_WEBHOOK_SECRET')
+        );
+
+        if ($event->type !== 'payment_intent.succeeded') {
+            return response()->json(['ok' => true]);
         }
 
-        $session = $event->payload['data']['object'];
+        $pi       = $event->data->object;
+        $amount   = $pi->amount_received;                      // cents
+        $email    = $pi->charges->data[0]->billing_details->email;
+        $customer = $pi->customer;
 
-        // Customer e-mail
-        $email = $session['customer_details']['email'];
+        /* ---- credit maths ---- */
+        $credits = (int) round(($amount / 100) / env('USD_PER_PATCH', 0.10));
 
-        // 1️⃣ Promote guest→pro in DB
-        $user = User::firstWhere('email', $email);
-        if ($user && $user->plan === 'guest') {
-            $user->forceFill([
-                'plan'             => 'pro',
-                'quota_remaining'  => 10_000,
-                'stripe_id'        => $session['customer'],   // link to Stripe
-            ])->save();
-        }
+        /* ---- local DB (Cockroach) ---- */
+        DB::transaction(function () use ($email, $customer, $credits) {
+            $user = User::firstOrCreate(['email' => $email]);
+            $user->increment('credits', $credits);
+            $user->stripe_customer_id = $customer;
+            $user->save();
+        });
 
-        // 2️⃣ Create Supabase user (if not exists)
-        Http::withToken(config('services.supabase.service_role'))
-            ->post(config('services.supabase.url').'/auth/v1/admin/users', [
-                'email'    => $email,
-                'password' => Str::random(32),
+        /* ---- Supabase : find / create / invite ---- */
+        $sb = Http::supabase();
+
+        // 1️⃣ lookup
+        $lookup = $sb->get('admin/users', ['email' => $email]);
+        $sbUser = $lookup->json('users.0');   // null if not found
+
+        // 2️⃣ create if needed
+        if (!$sbUser) {
+            $create = $sb->post('admin/users', [
+                'email'          => $email,
+                'email_confirm'  => false,
             ]);
+            $create->throw();
+            $sbUser = $create->json();
+        }
+
+        // 3️⃣ send magic-link
+        $invite = $sb->post('admin/invite', [
+            'email'        => $email,
+            'redirect_to'  => env('APP_URL').'/supabase/complete',
+        ]);
+        $invite->throw();
+
+        return response()->json(['credits_added' => $credits]);
     }
 
 }

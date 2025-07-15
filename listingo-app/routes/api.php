@@ -36,3 +36,12 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
 
 
 Route::middleware('supabase')->get('/quota', [QuotaController::class, 'show']);
+
+
+Route::post('/checkout/create', [CheckoutController::class, 'create'])
+    ->middleware('auth:api');        // optional – guests can call too
+
+// listingo-app/routes/api.php
+Route::post('/topup/session',  [TopUpController::class, 'createSession']);
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
+
