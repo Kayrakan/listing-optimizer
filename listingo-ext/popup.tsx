@@ -23,6 +23,15 @@ import { useInitAuth } from "~hooks/useInitAuth"
 import QuotaBadge from "./QuotaBadge"
 import "~style.css"
 
+import { supabase }   from "~core/supabase"
+import { buyCredits } from "~core/topup"
+
+
+// remove OverlayProps + inline component from popup.tsx
+import UpgradeOverlay from "~components/UpgradeOverlay"
+
+
+
 /* --------------------------------------------------------------------------
  * Tab keys
  * ------------------------------------------------------------------------ */
@@ -47,6 +56,10 @@ export default function Popup() {
     const [active, setActive] = useState<TabKey>("demo")
     const [limit, setLimit] = useState(10)
     const [busy, setBusy] = useState(false)
+
+    const [emailInput, setEmailInput] = useState("")   // guest e-mail
+    const [buying,     setBuying]     = useState(false)
+
 
     /* ---------- derived helpers ---------- */
     const isGuest = isGuestPlan(plan)
@@ -88,10 +101,32 @@ export default function Popup() {
     }, [plan])
 
 
-    const upgrade = () =>
-        chrome.tabs.create({
-            url: import.meta.env.PLASMO_PUBLIC_STRIPE_CHECKOUT
-        })
+    /** Open Stripe Checkout for a $10 pack (or prompt email for guests) */
+    const upgrade = async () => {
+        // guard against double-clicks
+        if (buying) return
+        setBuying(true)
+
+        // fall back to stored user email when already Pro (rare edge case)
+        const email =
+            emailInput.trim() ||
+            (await supabase.auth.getUser()).data.user?.email   ||
+            ""
+
+        if (!email) {
+            alert("Please enter a valid e-mail.")
+            setBuying(false)
+            return
+        }
+
+        try {
+            await buyCredits(10, email)          // $10 pack
+        } finally {
+            setBuying(false)
+        }
+    }
+
+
 
     /* ---------- reusable sub‑components ---------- */
     const NavBtn = ({
@@ -175,7 +210,16 @@ export default function Popup() {
             </main>
 
             {/* Upgrade overlay for guests */}
-            {locked && <UpgradeOverlay onUpgrade={upgrade} onBack={() => setActive("demo")} />}
+            {locked && (
+                <UpgradeOverlay
+                    email={emailInput}
+                    setEmail={setEmailInput}
+                    buying={buying}
+                    onUpgrade={upgrade}
+                    onBack={() => setActive("demo")}
+                />
+            )}
+
 
             {/* Footer */}
             <footer className="px-4 py-2 text-center text-xs text-base-50 border-t border-base-20">
@@ -187,7 +231,11 @@ export default function Popup() {
                 )}
                 {plan === 'pro' && (
                     <button
-                        onClick={() => buyCredits(10, supabase.auth.getUser()?.email!)}
+                        onClick={async () => {
+                            const { data } = await supabase.auth.getUser()   // v2 API
+                            const email = data.user?.email ?? ""
+                            buyCredits(10, email)        // $10 pack
+                        }}
                         className="ml-2 rounded bg-accent px-2 py-1 text-xs text-base-00"
                     >
                         + $10 Credits
@@ -307,29 +355,6 @@ function DemoTab() {
     )
 }
 
-function UpgradeOverlay({
-                            onUpgrade,
-                            onBack
-                        }: {
-    onUpgrade: () => void
-    onBack: () => void
-}) {
-    return (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-base-00/60 backdrop-blur-sm">
-            <div className="bg-base-00 border border-base-20 rounded-xl p-8 flex flex-col items-center gap-4 shadow-xl max-w-[320px] text-center">
-                <Lock className="h-6 w-6 text-accent" />
-                <h3 className="text-lg font-semibold">Unlock full power</h3>
-                <p className="text-sm text-base-70">Upgrade to Pro to access connected sources and bulk actions.</p>
-                <button onClick={onUpgrade} className="btn-accent w-full flex items-center justify-center gap-2">
-                    Upgrade to Pro <ArrowRight className="h-4 w-4" />
-                </button>
-                <button onClick={onBack} className="text-xs underline text-base-60 hover:text-base-90">
-                    Back to Demo
-                </button>
-            </div>
-        </div>
-    )
-}
 
 async function startOAuth(platform: string) {
     await chrome.tabs.create({

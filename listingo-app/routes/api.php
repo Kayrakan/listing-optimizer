@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\QuotaController;
+use App\Http\Controllers\TopUpController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;

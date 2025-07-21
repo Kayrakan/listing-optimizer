@@ -7,3 +7,5 @@ export const buyCredits = async (usd: number, email: string) => {
     }).then(r => r.json())
     chrome.tabs.create({ url: res.url })
 }
+
+
