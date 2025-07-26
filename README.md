@@ -34,44 +34,153 @@ PATCH consumer ─▶ Etsy PATCH ─▶ status='patched'
 
 ```text
 listing-optimizer/
-├── package.json           # root workspaces & helper scripts
-├── Makefile               # make dev · make lint · make build · make seed
-│
-├─ listingo-ext/           # Plasmo browser extension (@lo/listingo-ext)
-│   ├─ popup.tsx · content.tsx · options.tsx
-│   ├─ tailwind.config.js
-│   └─ package.json
-│
-├─ edge-api/               # Cloudflare Workers project (@lo/edge-api)
-│   ├─ src/router.ts       # /scan /result /patch
-│   ├─ src/consumers/      # scan.ts · gpt.ts · patch.ts
-│   ├─ src/utils/          # crypto.ts · openai.ts · jwt.ts
-│   ├─ wrangler.toml
-│   └─ pnpm-lock.yaml
-│
-├─ listingo-app/           # Laravel backend (Stripe, OAuth)
-│   ├─ app/ routes/ database/
-│   ├─ composer.json
-│   ├─ package.json        # vite + tailwind for frontend
-│   └─ README.md
-│
-├─ shared/                 # code shared by extension and workers
-│   ├─ schema.ts           # drizzle schema
-│   ├─ prompts.ts          # GPT template strings
-│   └─ types.ts            # JobRow, JwtClaims, …
-│
-├─ scripts/                # dev & helper tooling
-│   ├─ dev.sh              # spin Miniflare + Laravel + Plasmo
-│   └─ seed-db.ts          # fill CockroachDB with dummy data
-│
-├─ infra/                  # operational artefacts
-│   ├─ forge-deploy.sh
-│   └─ grafana-dashboard.json
-│
-└─ .github/workflows/
-    ├─ extension-ci.yml
-    ├─ edge-ci.yml
-    └─ api-ci.yml
+├── Makefile
+├── README.md
+├── edge-api
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   ├── shared
+│   │   ├── schema.ts
+│   │   └── supabase.ts
+│   ├── src
+│   │   ├── consumers
+│   │   │   ├── gpt.ts
+│   │   │   ├── patch.ts
+│   │   │   └── scan.ts
+│   │   ├── router.ts
+│   │   └── utils
+│   │       ├── crypto.ts
+│   │       ├── jwt.ts
+│   │       └── openai.ts
+│   └── wrangler.toml
+├── infra
+│   ├── forge-deploy.sh
+│   └── grafana-dashboard.json
+├── listingo-app
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── app
+│   │   ├── Http
+│   │   │   ├── Controllers
+│   │   │   │   ├── Controller.php
+│   │   │   │   ├── QuotaController.php
+│   │   │   │   ├── StripeWebhookController.php
+│   │   │   │   └── TopUpController.php
+│   │   │   └── Middleware
+│   │   │       └── VerifySupabaseJwt.php
+│   │   ├── Models
+│   │   │   └── User.php
+│   │   └── Providers
+│   │       └── AppServiceProvider.php
+│   ├── artisan
+│   ├── bootstrap
+│   │   ├── app.php
+│   │   ├── cache
+│   │   └── providers.php
+│   ├── composer.json
+│   ├── composer.lock
+│   ├── config
+│   │   ├── app.php
+│   │   ├── auth.php
+│   │   ├── cache.php
+│   │   ├── database.php
+│   │   ├── filesystems.php
+│   │   ├── logging.php
+│   │   ├── mail.php
+│   │   ├── queue.php
+│   │   ├── sanctum.php
+│   │   ├── services.php
+│   │   ├── session.php
+│   │   └── supabase.php
+│   ├── database
+│   │   ├── factories
+│   │   │   └── UserFactory.php
+│   │   ├── migrations
+│   │   │   ├── 0001_01_01_000000_create_users_table.php
+│   │   │   ├── 0001_01_01_000002_create_jobs_table.php
+│   │   │   ├── 2025_06_30_002641_create_personal_access_tokens_table.php
+│   │   │   ├── 2025_07_04_183734_create_listing_jobs_table.php
+│   │   │   └── 2025_07_15_145825_add_credits_and_stripe_to_users.php
+│   │   └── seeders
+│   │       └── DatabaseSeeder.php
+│   ├── package.json
+│   ├── phpunit.xml
+│   ├── public
+│   │   ├── favicon.ico
+│   │   ├── index.php
+│   │   └── robots.txt
+│   ├── resources
+│   │   ├── css
+│   │   │   └── app.css
+│   │   ├── js
+│   │   │   ├── app.js
+│   │   │   └── bootstrap.js
+│   │   └── views
+│   │       ├── supabase-complete.blade.php
+│   │       └── welcome.blade.php
+│   ├── routes
+│   │   ├── api.php
+│   │   ├── console.php
+│   │   └── web.php
+│   ├── tests
+│   │   ├── Feature
+│   │   │   └── ExampleTest.php
+│   │   ├── TestCase.php
+│   │   └── Unit
+│   │       └── ExampleTest.php
+│   └── vite.config.js
+├── listingo-ext
+│   ├── QuotaBadge.tsx
+│   ├── README.md
+│   ├── assets
+│   │   └── icon.png
+│   ├── background
+│   │   ├── background
+│   │   │   └── demo-oauth.ts
+│   │   └── worker.ts
+│   ├── components
+│   │   ├── ConnectedSources.tsx
+│   │   ├── DemoTab.tsx
+│   │   ├── SignInOverlay.tsx
+│   │   └── UpgradeOverlay.tsx
+│   ├── content.tsx
+│   ├── core
+│   │   ├── edge.ts
+│   │   ├── supabase.ts
+│   │   ├── topup.ts
+│   │   ├── types.ts
+│   │   └── useQuotaPoll.ts
+│   ├── env.d.ts
+│   ├── hooks
+│   │   ├── useInitAuth.ts
+│   │   ├── usePoll.ts
+│   │   └── useStripeCheckout.ts
+│   ├── options.tsx
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   ├── popup.tsx
+│   ├── postcss.config.js
+│   ├── state
+│   │   ├── authSlice.ts
+│   │   ├── demoSlice.ts
+│   │   ├── index.ts
+│   │   ├── jobsSlice.ts
+│   │   ├── quotaSlice.ts
+│   │   └── sourcesSlice.ts
+│   ├── style.css
+│   ├── tailwind.config.js
+│   └── tsconfig.json
+├── package-lock.json
+├── package.json
+├── scripts
+│   ├── dev.sh
+│   └── seed-db.ts
+└── shared
+    ├── package.json
+    ├── prompts.ts
+    ├── schema.ts
+    └── types.ts
+
 ```
 
 ### Root `package.json`

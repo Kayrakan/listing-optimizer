@@ -9,14 +9,14 @@
  *   • onBack       – return to Demo tab
  * ------------------------------------------------------------------------ */
 
-import { useState, type FC } from "react"
-import { Lock, RefreshCcw, ArrowRight } from "lucide-react"
+import { useState, useEffect, type FC, type KeyboardEvent } from "react"
+import { Lock, RefreshCcw, ArrowRight, Mail, CreditCard } from "lucide-react"
 
 export interface UpgradeOverlayProps {
     email: string
     setEmail: (v: string) => void
     buying: boolean
-    onUpgrade: () => void
+    onUpgrade: (email?: string) => void
     onBack: () => void
 }
 
@@ -29,49 +29,99 @@ const UpgradeOverlay: FC<UpgradeOverlayProps> = ({
                                                  }) => {
     // local buffer so typing doesn't instantly mutate parent state
     const [temp, setTemp] = useState(email)
+    const [isValid, setIsValid] = useState(false)
+    const [showValidation, setShowValidation] = useState(false)
+
+    // Update local state when prop changes
+    useEffect(() => {
+        setTemp(email)
+    }, [email])
+
+    // Validate email format
+    useEffect(() => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        setIsValid(emailRegex.test(temp.trim()))
+    }, [temp])
 
     const saveAndUpgrade = () => {
-        setEmail(temp.trim())
-        onUpgrade()
+        setShowValidation(true)
+        if (!isValid) return
+        const e = temp.trim()
+        setEmail(e)
+        // Pass the validated email directly to onUpgrade
+        onUpgrade(e)
+    }
+
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            saveAndUpgrade()
+        }
     }
 
     return (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-base-00/60 backdrop-blur-sm">
-            <div className="bg-base-00 border border-base-20 rounded-xl p-8 flex flex-col gap-4 shadow-xl max-w-[340px] w-full">
-                <div className="flex flex-col items-center gap-1">
-                    <Lock className="h-6 w-6 text-accent" />
-                    <h3 className="text-lg font-semibold">Unlock full power</h3>
+            <div className="bg-base-00 border border-base-20 rounded-xl p-8 flex flex-col gap-5 shadow-xl max-w-[380px] w-full">
+                <div className="flex flex-col items-center gap-2">
+                    <div className="bg-accent/10 p-3 rounded-full">
+                        <Lock className="h-7 w-7 text-accent" />
+                    </div>
+                    <h3 className="text-xl font-semibold">Unlock Pro Features</h3>
                     <p className="text-sm text-base-70 text-center">
-                        Upgrade to Pro to access connected sources and bulk actions.
+                        Get unlimited access to connected sources and powerful bulk actions.
                     </p>
                 </div>
 
-                <label className="text-xs font-medium text-base-60">
-                    E‑mail for receipt & magic‑link
-                </label>
-                <input
-                    type="email"
-                    value={temp}
-                    onChange={(e) => setTemp(e.target.value)}
-                    className="w-full border border-base-30 rounded-md px-3 py-2 text-base outline-none focus:border-accent"
-                    placeholder="you@example.com"
-                />
+                <div className="bg-base-05 p-4 rounded-lg">
+                    <div className="flex items-start gap-3 mb-3">
+                        <div className="mt-1">
+                            <CreditCard className="h-5 w-5 text-accent" />
+                        </div>
+                        <div>
+                            <h4 className="font-medium">Pro Plan - $10</h4>
+                            <p className="text-xs text-base-70">Includes 100 listing optimizations</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Your email address</label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-base-60" />
+                        <input
+                            type="email"
+                            value={temp}
+                            onChange={e => setTemp(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="you@example.com"
+                            className="w-full border rounded-lg px-10 py-2.5 focus:ring-2 focus:ring-accent focus:border-accent focus:outline-none"
+                            aria-label="Email for receipt and magic-link"
+                            autoFocus
+                        />
+                    </div>
+                    {showValidation && !isValid && (
+                        <p className="text-xs text-red-500">Please enter a valid email address</p>
+                    )}
+                </div>
 
                 <button
                     onClick={saveAndUpgrade}
                     disabled={buying}
-                    className="btn-accent w-full flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="mt-2 w-full btn-accent py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                    {buying && <RefreshCcw className="h-4 w-4 animate-spin" />}
-                    {buying ? "Redirecting…" : "Upgrade for $10"}
-                    <ArrowRight className="h-4 w-4" />
+                    {buying && <RefreshCcw className="animate-spin h-4 w-4"/>}
+                    {buying ? "Processing payment..." : "Upgrade Now"}
+                    {!buying && <ArrowRight className="h-4 w-4" />}
                 </button>
+
+                <div className="text-xs text-center text-base-60">
+                    Secure payment processing by Stripe
+                </div>
 
                 <button
                     onClick={onBack}
-                    className="text-xs underline self-center text-base-60 hover:text-base-90"
+                    className="text-sm underline self-center text-base-60 hover:text-base-90 mt-2"
                 >
-                    Back to Demo
+                    Continue with Demo
                 </button>
             </div>
         </div>

@@ -113,16 +113,17 @@ export default function Popup() {
 
 
     /** Open Stripe Checkout for a $10 pack (or prompt email for guests) */
-    const upgrade = async () => {
+    const upgrade = async (overrideEmail?: string) => {
         if (buying) return
         setBuying(true)
 
-        const email =
-            emailInput.trim() ||
-            (await supabase.auth.getUser()).data.user?.email ||
-            ""
+        const email = overrideEmail?.trim()
+            || (await supabase.auth.getUser()).data.user?.email
+            || "";
 
-        if (!email) {
+        // Validate email format with regex
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!email || !emailRegex.test(email)) {
             alert("Please enter a valid e-mail.")
             setBuying(false)
             return
@@ -142,6 +143,9 @@ export default function Popup() {
                     chrome.tabs.onRemoved.removeListener(listener)
                 }
             })
+        } catch (error) {
+            console.error("Failed to process payment:", error);
+            alert("Payment processing failed. Please try again later or contact support.");
         } finally {
             setBuying(false)
         }
@@ -209,7 +213,7 @@ export default function Popup() {
                                     Upgrade to connect multiple stores and run bulk actions.
                                 </p>
                                 <button
-                                    onClick={upgrade}
+                                    onClick={() => upgrade()}
                                     className="rounded-md bg-accent hover:bg-accent-hover text-base-00 py-2 flex items-center justify-center gap-2"
                                 >
                                     Upgrade to Pro <ArrowRight className="h-4 w-4" />
@@ -237,7 +241,7 @@ export default function Popup() {
                     email={emailInput}
                     setEmail={setEmailInput}
                     buying={buying}
-                    onUpgrade={upgrade}
+                    onUpgrade={(email) => upgrade(email || emailInput)}
                     onBack={() => setActive("demo")}
                 />
             )}
