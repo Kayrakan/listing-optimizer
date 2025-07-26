@@ -25,10 +25,14 @@ import "~style.css"
 
 import { supabase }   from "~core/supabase"
 import { buyCredits } from "~core/topup"
+import { useQuotaPoll } from "~core/useQuotaPoll"   // ⬅︎ add here
 
 
 // remove OverlayProps + inline component from popup.tsx
 import UpgradeOverlay from "~components/UpgradeOverlay"
+import ConnectedSources from "~components/ConnectedSources"
+import DemoTab from "~components/DemoTab"
+import SignInOverlay     from "~components/SignInOverlay"
 
 
 
@@ -59,6 +63,13 @@ export default function Popup() {
 
     const [emailInput, setEmailInput] = useState("")   // guest e-mail
     const [buying,     setBuying]     = useState(false)
+
+
+    const [polling, setPolling]    = useState(false)   // quota-poll switch
+    useQuotaPoll(polling)        // ⬅︎ starts or stops based on flag
+
+    const showSignIn   = useStore(s => s.showSignIn)
+    const setShowSignIn= useStore(s => s.setShowSignIn)
 
 
     /* ---------- derived helpers ---------- */
@@ -103,14 +114,12 @@ export default function Popup() {
 
     /** Open Stripe Checkout for a $10 pack (or prompt email for guests) */
     const upgrade = async () => {
-        // guard against double-clicks
         if (buying) return
         setBuying(true)
 
-        // fall back to stored user email when already Pro (rare edge case)
         const email =
             emailInput.trim() ||
-            (await supabase.auth.getUser()).data.user?.email   ||
+            (await supabase.auth.getUser()).data.user?.email ||
             ""
 
         if (!email) {
@@ -120,11 +129,24 @@ export default function Popup() {
         }
 
         try {
-            await buyCredits(10, email)          // $10 pack
+            /* 1. create Checkout, get URL */
+            const url = await buyCredits(10, email)
+            const { id: tabId } = await chrome.tabs.create({ url })
+
+            // Fallback: start polling after 60 s even if the tab is still open
+            setTimeout(() => setPolling(true), 60_000)               // NEW
+
+            chrome.tabs.onRemoved.addListener(function listener(closedId) {
+                if (closedId === tabId) {
+                    setPolling(true)                                     // instant path
+                    chrome.tabs.onRemoved.removeListener(listener)
+                }
+            })
         } finally {
             setBuying(false)
         }
     }
+
 
 
 
@@ -220,6 +242,7 @@ export default function Popup() {
                 />
             )}
 
+            {showSignIn && <SignInOverlay email={emailInput} />}
 
             {/* Footer */}
             <footer className="px-4 py-2 text-center text-xs text-base-50 border-t border-base-20">
@@ -248,27 +271,7 @@ export default function Popup() {
 }
 
 /* ========================= helper components =========================== */
-function ConnectedSources() {
-    const sources = useStore((s) => s.sources)
 
-    if (!sources?.length) {
-        return <p className="text-sm text-base-70">No sources connected yet.</p>
-    }
-
-    return (
-        <ul className="flex flex-col gap-2">
-            {sources.map((src: any) => (
-                <li key={src.id} className="flex items-center justify-between p-3 border border-base-20 rounded-md">
-                    <div className="flex items-center gap-2">
-                        <Store className="h-4 w-4" />
-                        <span>{src.name}</span>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-base-60" />
-                </li>
-            ))}
-        </ul>
-    )
-}
 
 function ConnectorButton({ name, onClick }: { name: string; onClick: () => void }) {
     return (
@@ -278,83 +281,6 @@ function ConnectorButton({ name, onClick }: { name: string; onClick: () => void 
         </button>
     )
 }
-
-function DemoTab() {
-    const demoStore = useStore((s) => s.demoStore)
-    const setDemoStore = useStore((s) => s.setDemoStore)
-    const enqueue = useStore((s) => s.trackJob)
-
-    const [phase, setPhase] = useState<"idle" | "oauth" | "scanning">("idle")
-
-    /* 1️⃣ open OAuth in new tab */
-    const connect = async (platform: "etsy" | "shopify") => {
-        setPhase("oauth")
-        await chrome.tabs.create({
-            url: `${import.meta.env.PLASMO_PUBLIC_API_BASE}/oauth/demo/${platform}`
-        })
-    }
-
-    /* 2️⃣ listen for OAuth success message */
-    useEffect(() => {
-        const listener = (msg: any) => {
-            if (msg?.type !== "demo-oauth-success") return
-            setDemoStore({
-                id: msg.storeId,
-                platform: msg.platform,
-                name: msg.storeName
-            })
-            setPhase("idle")
-        }
-        chrome.runtime.onMessage.addListener(listener)
-        return () => chrome.runtime.onMessage.removeListener(listener)
-    }, [])
-
-    /* 3️⃣ run the 10‑listing scan */
-    const runDemo = async () => {
-        if (!demoStore) return
-        setPhase("scanning")
-        const { jobId } = await edgeFetch<{ jobId: string }>("/scan", {
-            limit: 10,
-            demoStoreId: demoStore.id
-        })
-        enqueue(jobId)
-        setPhase("idle")
-    }
-
-    /* ---------- UI ---------- */
-    return (
-        <section className="flex flex-col gap-4">
-            <h2 className="font-semibold text-lg">Quick Demo</h2>
-
-            {!demoStore ? (
-                <>
-                    <p className="text-sm text-base-70">Connect one store to see title suggestions on its top 10 listings.</p>
-                    <button onClick={() => connect("etsy")} disabled={phase === "oauth"} className="btn-primary">
-                        {phase === "oauth" ? "Waiting for OAuth…" : "Connect Etsy"}
-                    </button>
-                    <button onClick={() => connect("shopify")} disabled={phase === "oauth"} className="btn-secondary">
-                        Connect Shopify
-                    </button>
-                </>
-            ) : (
-                <>
-                    <div className="flex items-center gap-2 bg-base-05 p-3 rounded">
-                        <Store className="h-4 w-4" />
-                        <span className="font-medium">{demoStore.name}</span>
-                        <button onClick={() => setDemoStore(undefined)} className="ml-auto text-xs underline">
-                            Change store
-                        </button>
-                    </div>
-                    <button onClick={runDemo} disabled={phase === "scanning"} className="btn-accent flex items-center justify-center gap-2">
-                        {phase === "scanning" && <RefreshCcw className="h-4 w-4 animate-spin" />}
-                        {phase === "scanning" ? "Scanning…" : "Run demo on 10 listings"}
-                    </button>
-                </>
-            )}
-        </section>
-    )
-}
-
 
 async function startOAuth(platform: string) {
     await chrome.tabs.create({

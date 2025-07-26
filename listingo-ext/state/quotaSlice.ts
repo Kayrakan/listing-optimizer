@@ -7,6 +7,10 @@ export interface QuotaSlice {
     refresh: () => Promise<void>
     setRemaining: (n: number) => void          // ◀︎ new
 
+
+    /* NEW: magic-link fallback */
+    showSignIn: boolean
+    setShowSignIn: (v: boolean) => void
 }
 
 // --- slice factory ------------------------------------------------------
@@ -18,6 +22,9 @@ export const createQuotaSlice: StateCreator<
 > = (set, get) => ({
     remaining: 0,
     setRemaining: (n) => set({ remaining: n }),   // ◀︎ new
+    showSignIn: false,
+    setShowSignIn: (v) => set({ showSignIn: v }),
+
 
     async refresh() {
         const jwt = get().jwt                              // from authSlice
