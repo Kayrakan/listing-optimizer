@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Firebase\JWT\JWT;
 use Illuminate\Support\Str;
-use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\LemonSqueezyWebhookController;
 
 // run:  composer require firebase/php-jwt
 
@@ -33,16 +33,13 @@ Route::post('/auth/guest', function () {
 
 
 
-Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
+Route::post('/lemonsqueezy/webhook', [LemonSqueezyWebhookController::class, 'handle']);
 
 
 Route::middleware('supabase')->get('/quota', [QuotaController::class, 'show']);
 
 
-Route::post('/checkout/create', [CheckoutController::class, 'create'])
-    ->middleware('auth:api');        // optional – guests can call too
+// Route removed as we're using TopUpController for payments
 
 // listingo-app/routes/api.php
 Route::post('/topup/session',  [TopUpController::class, 'createSession']);
-Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
-

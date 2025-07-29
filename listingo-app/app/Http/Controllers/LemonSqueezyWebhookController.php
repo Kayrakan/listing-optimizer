@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Models\User;
 use Exception;
+use LemonSqueezy\Laravel\Facades\LemonSqueezy;
 
-class StripeWebhookController extends Controller
+class LemonSqueezyWebhookController extends Controller
 {
     /**
-     * Handle Stripe webhook events
+     * Handle LemonSqueezy webhook events
      *
      * @param Request $req
      * @return \Illuminate\Http\JsonResponse
@@ -22,23 +23,28 @@ class StripeWebhookController extends Controller
     {
         try {
             // Verify the webhook signature
-            $event = \Stripe\Webhook::constructEvent(
-                $req->getContent(),
-                $req->header('Stripe-Signature'),
-                config('stripe.webhook.secret')
-            );
+            $payload = $req->getContent();
+            $signature = $req->header('X-Signature');
 
-            Log::info('Stripe webhook received', ['type' => $event->type]);
+            if (!LemonSqueezy::verifyWebhookSignature($payload, $signature)) {
+                Log::error('Webhook signature verification failed');
+                return response()->json(['error' => 'Invalid signature'], 400);
+            }
 
-            // Only process payment_intent.succeeded events
-            if ($event->type !== 'payment_intent.succeeded') {
+            $event = json_decode($payload, true);
+            $eventName = $event['meta']['event_name'] ?? '';
+
+            Log::info('LemonSqueezy webhook received', ['type' => $eventName]);
+
+            // Only process order_created events
+            if ($eventName !== 'order_created') {
                 return response()->json(['ok' => true]);
             }
 
-            $pi       = $event->data->object;
-            $amount   = $pi->amount_received;                      // cents
-            $email    = $pi->charges->data[0]->billing_details->email;
-            $customer = $pi->customer;
+            $data = $event['data']['attributes'] ?? [];
+            $amount = $data['total'] ?? 0;                      // cents
+            $email = $data['user_email'] ?? '';
+            $customer = $data['customer_id'] ?? '';
 
             /* ---- credit maths ---- */
             $credits = (int) round(($amount / 100) / config('app.usd_per_patch', 0.10));
@@ -53,7 +59,7 @@ class StripeWebhookController extends Controller
             DB::transaction(function () use ($email, $customer, $credits) {
                 $user = User::firstOrCreate(['email' => $email]);
                 $user->increment('credits', $credits);
-                $user->stripe_customer_id = $customer;
+                $user->lemonsqueezy_customer_id = $customer;
                 $user->save();
             });
 
@@ -83,10 +89,6 @@ class StripeWebhookController extends Controller
 
             return response()->json(['credits_added' => $credits]);
 
-        } catch (\Stripe\Exception\SignatureVerificationException $e) {
-            // Invalid signature
-            Log::error('Webhook signature verification failed', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Invalid signature'], 400);
         } catch (Exception $e) {
             // Other errors
             Log::error('Webhook processing failed', ['error' => $e->getMessage()]);

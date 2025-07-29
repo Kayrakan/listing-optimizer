@@ -7,7 +7,7 @@ interface ImportMetaEnv {
     // add every other public var here ↓
     readonly PLASMO_PUBLIC_SUPABASE_URL: string
     readonly PLASMO_PUBLIC_SUPABASE_KEY: string
-    readonly PLASMO_PUBLIC_STRIPE_CHECKOUT: string
+    readonly PLASMO_PUBLIC_LEMONSQUEEZY_CHECKOUT: string
 }
 
 interface ImportMeta {

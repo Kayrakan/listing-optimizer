@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Credit Pricing
+    |--------------------------------------------------------------------------
+    |
+    | This value determines the price per credit in USD. This is used to
+    | calculate how many credits a user receives when they make a payment.
+    |
+    */
+
+    'usd_per_patch' => env('USD_PER_PATCH', 0.10),
+
 ];

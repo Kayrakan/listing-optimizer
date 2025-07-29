@@ -33,7 +33,7 @@ export const useInitAuth = () => {
 
         boot()
 
-        // 3️⃣ Keep Zustand in sync when Supabase signs in (magic-link / Stripe upgrade)
+        // 3️⃣ Keep Zustand in sync when Supabase signs in (magic-link / LemonSqueezy upgrade)
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, sess) => {
             if (sess?.access_token) setJwt(sess.access_token)
         })

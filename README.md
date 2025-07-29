@@ -8,13 +8,13 @@ A Chrome/Edge browser extension that bulk-rewrites marketplace listings with GPT
 
 | Layer | Runtime | Main responsibilities | Why this pick |
 | --- | --- | --- | --- |
-| Client | Plasmo (MV3) · React 18 · Tailwind · Zustand | Popup & side-panel UI, JWT storage, calls `/scan` `/result` `/patch`, opens Stripe Checkout | Rich UX, hot-reload, Manifest v3 scaffolding |
+| Client | Plasmo (MV3) · React 18 · Tailwind · Zustand | Popup & side-panel UI, JWT storage, calls `/scan` `/result` `/patch`, opens lemonsqueezy Checkout | Rich UX, hot-reload, Manifest v3 scaffolding |
 | Edge | Cloudflare Workers + Hono router · Cloudflare Queues | Verify JWT → enqueue SCAN_Q → GPT_Q → PATCH_Q, persist GPT answer, return status | POP-level latency, autoscale, DLQ |
-| Core | Laravel 11 on Forge (PHP-FPM for now) | Guest-token issuance, OAuth2 redirects, Stripe Cashier metered billing, `/api/usage`, `/api/quota` | Cashier + Socialite = quickest path to compliant billing |
+| Core | Laravel 11 on Forge (PHP-FPM for now) | Guest-token issuance, OAuth2 redirects, lemonsqueezy metered billing, `/api/usage`, `/api/quota` | Cashier + Socialite = quickest path to compliant billing |
 | Database | CockroachDB Serverless (eu-central) | `users` and `jobs` tables; RLS `user_id = jwt.sub` | Horizontal writes, Postgres driver for JS & PHP |
 | Auth | Supabase magic-link → RS256 JWT | Zero password UX; JWT can be verified in both Worker & Laravel |
 | AI | OpenAI GPT-4o-mini via fetch SDK | 200–300 ms result; can swap to Fly GPU batch later |
-| Payments | Stripe Checkout + Customer Portal | Comply with Chrome Web Store “free only” policy |
+| Payments | lemonsqueezy Checkout + Customer Portal | Comply with Chrome Web Store “free only” policy |
 
 ## Request flow (one optimisation)
 
@@ -27,7 +27,7 @@ GPT consumer  ─▶ save result_json, status='ready'
 (extension polls /result)  ◀─────┛
 (extension) /patch ─▶ PATCH_Q
 PATCH consumer ─▶ Etsy PATCH ─▶ status='patched'
-                     └─ POST /api/usage (Laravel) ─▶ Stripe usage +1
+                     └─ POST /api/usage (Laravel) ─▶ lemonsqueezy usage +1
 ```
 
 ## 2 Repository structure
@@ -239,10 +239,10 @@ pnpm ts-node scripts/seed-db.ts
 
 ## 3 Environment variable map
 
-| Context | Variables |
-| --- | --- |
-| Edge Worker | SUPABASE_URL SUPABASE_JWK_CACHE_MIN CR_DB_URL OPENAI_API_KEY HMAC_SECRET |
-| Laravel .env | CR_DB_URL STRIPE_SECRET STRIPE_WEBHOOK_SECRET SUPABASE_JWK_URL JWT_PUBLIC_KEY |
+| Context | Variables                                                                           |
+| --- |-------------------------------------------------------------------------------------|
+| Edge Worker | SUPABASE_URL SUPABASE_JWK_CACHE_MIN CR_DB_URL OPENAI_API_KEY HMAC_SECRET            |
+| Laravel .env | CR_DB_URL LEMONSQUEEZY_SECRET LEMONSQUEEZY_WEBHOOK_SECRET SUPABASE_JWK_URL JWT_PUBLIC_KEY |
 
 ## 4 Operational checklist
 
@@ -255,21 +255,19 @@ pnpm ts-node scripts/seed-db.ts
 
 ## 5 Timeline snapshot
 
-| Week | Deliverable |
-| --- | --- |
-| 1 | Guest JWT + Scan/Result demo |
-| 3 | Stripe upgrade flips quota, CI pipelines green |
-| 4 | Optional GPU batch, Grafana live |
-| 6 | Chrome Web Store beta with real billing |
+| Week | Deliverable                                          |
+| --- |------------------------------------------------------|
+| 1 | Guest JWT + Scan/Result demo                         |
+| 3 | Lemonsqueezy upgrade flips quota, CI pipelines green |
+| 4 | Optional GPU batch, Grafana live                     |
+| 6 | Chrome Web Store beta with real billing              |
 
 ## 6 Why this configuration is “best value”
 
 Edge owns speed → sub-400 ms listing loop, autoscale queues.
 
-Laravel owns money → Stripe Cashier + Socialite in one composer line.
-
 Workspaces & Makefile → clone → `npm i` → `make dev`; new dev productive in minutes.
 
 Cockroach → one source of truth for both JS and PHP.
 
-Guest-token pattern → zero signup friction; Stripe handles verified identity.
+Guest-token pattern → zero signup friction; LemonSqueezy handles verified identity.

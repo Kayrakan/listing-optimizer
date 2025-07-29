@@ -42,9 +42,11 @@ return [
         'jwk'          => env('SUPABASE_JWK_URL'),
     ],
 
-    'stripe' => [
-        'secret'         => env('STRIPE_SECRET'),
-        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    'lemonsqueezy' => [
+        'api_key'        => env('LEMONSQUEEZY_API_KEY'),
+        'signing_secret' => env('LEMONSQUEEZY_SIGNING_SECRET'),
+        'store_id'       => env('LEMONSQUEEZY_STORE_ID'),
+        'variant_id'     => env('LEMONSQUEEZY_VARIANT_ID'),
     ],
 
 ];

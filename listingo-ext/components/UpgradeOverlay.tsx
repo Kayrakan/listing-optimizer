@@ -5,7 +5,7 @@
  *   • email        – current value to pre‑fill
  *   • setEmail     – setter to lift value to parent
  *   • buying       – boolean spinner / disabled state
- *   • onUpgrade    – callback that opens Stripe Checkout
+ *   • onUpgrade    – callback that opens LemonSqueezy Checkout
  *   • onBack       – return to Demo tab
  * ------------------------------------------------------------------------ */
 
@@ -114,7 +114,7 @@ const UpgradeOverlay: FC<UpgradeOverlayProps> = ({
                 </button>
 
                 <div className="text-xs text-center text-base-60">
-                    Secure payment processing by Stripe
+                    Secure payment processing by LemonSqueezy
                 </div>
 
                 <button
