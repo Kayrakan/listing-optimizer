@@ -36,8 +36,8 @@ class LemonSqueezyWebhookController extends Controller
 
             Log::info('LemonSqueezy webhook received', ['type' => $eventName]);
 
-            // Only process order_created events
-            if ($eventName !== 'order_created') {
+            // Process order_created and order_refunded events
+            if ($eventName !== 'order_created' && $eventName !== 'order_refunded') {
                 return response()->json(['ok' => true]);
             }
 
@@ -49,45 +49,70 @@ class LemonSqueezyWebhookController extends Controller
             /* ---- credit maths ---- */
             $credits = (int) round(($amount / 100) / config('app.usd_per_patch', 0.10));
 
-            Log::info('Processing payment', [
-                'email' => $email,
-                'amount' => $amount,
-                'credits' => $credits
-            ]);
-
-            /* ---- local DB (Cockroach) ---- */
-            DB::transaction(function () use ($email, $customer, $credits) {
-                $user = User::firstOrCreate(['email' => $email]);
-                $user->increment('credits', $credits);
-                $user->lemonsqueezy_customer_id = $customer;
-                $user->save();
-            });
-
-            /* ---- Supabase : find / create / invite ---- */
-            $sb = Http::supabase();
-
-            // 1️⃣ lookup
-            $lookup = $sb->get('admin/users', ['email' => $email]);
-            $sbUser = $lookup->json('users.0');   // null if not found
-
-            // 2️⃣ create if needed
-            if (!$sbUser) {
-                $create = $sb->post('admin/users', [
-                    'email'          => $email,
-                    'email_confirm'  => false,
+            if ($eventName === 'order_created') {
+                Log::info('Processing payment', [
+                    'email' => $email,
+                    'amount' => $amount,
+                    'credits' => $credits
                 ]);
-                $create->throw();
-                $sbUser = $create->json();
+
+                /* ---- local DB (Cockroach) ---- */
+                DB::transaction(function () use ($email, $customer, $credits) {
+                    $user = User::firstOrCreate(['email' => $email]);
+                    $user->increment('credits', $credits);
+                    $user->lemonsqueezy_customer_id = $customer;
+                    $user->save();
+                });
+            } elseif ($eventName === 'order_refunded') {
+                Log::info('Processing refund', [
+                    'email' => $email,
+                    'amount' => $amount,
+                    'credits' => $credits
+                ]);
+
+                /* ---- local DB (Cockroach) ---- */
+                DB::transaction(function () use ($email, $credits) {
+                    $user = User::where('email', $email)->first();
+                    if ($user) {
+                        $user->decrement('credits', $credits);
+                        $user->save();
+                    } else {
+                        Log::warning('User not found for refund', ['email' => $email]);
+                    }
+                });
             }
 
-            // 3️⃣ send magic-link
-            $invite = $sb->post('admin/invite', [
-                'email'        => $email,
-                'redirect_to'  => config('app.url').'/supabase/complete',
-            ]);
-            $invite->throw();
+            // Only perform Supabase operations for new orders, not for refunds
+            if ($eventName === 'order_created') {
+                /* ---- Supabase : find / create / invite ---- */
+                $sb = Http::supabase();
 
-            return response()->json(['credits_added' => $credits]);
+                // 1️⃣ lookup
+                $lookup = $sb->get('admin/users', ['email' => $email]);
+                $sbUser = $lookup->json('users.0');   // null if not found
+
+                // 2️⃣ create if needed
+                if (!$sbUser) {
+                    $create = $sb->post('admin/users', [
+                        'email'          => $email,
+                        'email_confirm'  => false,
+                    ]);
+                    $create->throw();
+                    $sbUser = $create->json();
+                }
+
+                // 3️⃣ send magic-link
+                $invite = $sb->post('admin/invite', [
+                    'email'        => $email,
+                    'redirect_to'  => config('app.url').'/supabase/complete',
+                ]);
+                $invite->throw();
+
+                return response()->json(['credits_added' => $credits]);
+            } else {
+                // For refunds, just return the number of credits deducted
+                return response()->json(['credits_deducted' => $credits]);
+            }
 
         } catch (Exception $e) {
             // Other errors
