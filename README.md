@@ -64,7 +64,7 @@ listing-optimizer/
 │   │   │   ├── Controllers
 │   │   │   │   ├── Controller.php
 │   │   │   │   ├── QuotaController.php
-│   │   │   │   ├── StripeWebhookController.php
+│   │   │   │   ├── LemonSqueezyWebhookController.php
 │   │   │   │   └── TopUpController.php
 │   │   │   └── Middleware
 │   │   │       └── VerifySupabaseJwt.php
@@ -85,6 +85,7 @@ listing-optimizer/
 │   │   ├── cache.php
 │   │   ├── database.php
 │   │   ├── filesystems.php
+│   │   ├── lemonsqueezy.php
 │   │   ├── logging.php
 │   │   ├── mail.php
 │   │   ├── queue.php
@@ -100,7 +101,8 @@ listing-optimizer/
 │   │   │   ├── 0001_01_01_000002_create_jobs_table.php
 │   │   │   ├── 2025_06_30_002641_create_personal_access_tokens_table.php
 │   │   │   ├── 2025_07_04_183734_create_listing_jobs_table.php
-│   │   │   └── 2025_07_15_145825_add_credits_and_stripe_to_users.php
+│   │   │   ├── 2025_07_15_145825_add_credits_and_stripe_to_users.php
+│   │   │   └── 2025_07_28_224353_rename_stripe_to_lemonsqueezy_in_users_table.php
 │   │   └── seeders
 │   │       └── DatabaseSeeder.php
 │   ├── package.json
@@ -154,7 +156,7 @@ listing-optimizer/
 │   ├── hooks
 │   │   ├── useInitAuth.ts
 │   │   ├── usePoll.ts
-│   │   └── useStripeCheckout.ts
+│   │   └── useLemonSqueezyCheckout.ts
 │   ├── options.tsx
 │   ├── package.json
 │   ├── pnpm-lock.yaml
