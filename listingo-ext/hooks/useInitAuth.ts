@@ -4,6 +4,7 @@
 import { useEffect } from "react"
 import { supabase } from "~core/supabase"
 import { useStore } from "~state"
+import { getEnv } from "~core/env"
 
 export const useInitAuth = () => {
     const setJwt = useStore((s) => s.setJwt)
@@ -19,22 +20,28 @@ export const useInitAuth = () => {
             }
 
             // 2️⃣ Otherwise, request guest token from Laravel
-            console.log('api base');
-            console.log(process.env.PLASMO_PUBLIC_API_BASE!);
-            // console.log(import.meta.env.PLASMO_PUBLIC_API_BASE);
-            const api = process.env.PLASMO_PUBLIC_API_BASE! // e.g. http://localhost:8000
-            const { token } = await fetch(`${api}/api/auth/guest`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" }   // body is empty but ok
-            }).then(r => r.json())
-            console.log(token);
-            setJwt(token)
+            const api = getEnv("PLASMO_PUBLIC_API_BASE") || "http://localhost:8000"
+            try {
+                const response = await fetch(`${api}/api/auth/guest`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }   // body is empty but ok
+                })
+                
+                if (response.ok) {
+                    const { token } = await response.json()
+                    setJwt(token)
+                } else {
+                    console.warn("Failed to get guest token:", response.status)
+                }
+            } catch (error) {
+                console.warn("Error getting guest token:", error)
+            }
         }
 
         boot()
 
         // 3️⃣ Keep Zustand in sync when Supabase signs in (magic-link / LemonSqueezy upgrade)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, sess) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_e: any, sess: any) => {
             if (sess?.access_token) setJwt(sess.access_token)
         })
 

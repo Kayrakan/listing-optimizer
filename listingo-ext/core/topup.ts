@@ -1,32 +1,41 @@
 // ~core/topup.ts
-// core/topup.ts
+import { getEnv } from "~core/env"
+
+let inFlight: Promise<string> | null = null
+
 export async function buyCredits(usd: number, email: string) {
-    try {
-        const response = await fetch(`${process.env.PLASMO_PUBLIC_API_BASE}/api/topup/session`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, cents: usd * 100 })
-        });
+    // Return existing promise if a request is already in progress
+    if (inFlight) return inFlight
 
-        if (!response.ok) {
-            throw new Error(`Server responded with status: ${response.status}`);
+    inFlight = (async () => {
+        try {
+            const apiBase = getEnv("PLASMO_PUBLIC_API_BASE") || "http://localhost:8000"
+            const response = await fetch(`${apiBase}/api/topup/session`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, cents: Math.round(usd * 100) })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new Error("Server response was not JSON");
+            }
+
+            const res = await response.json();
+            if (!res.url) {
+                throw new Error("Invalid response format: missing URL");
+            }
+
+            return res.url as string;
+        } finally {
+            // Reset guard once finished (success or error)
+            inFlight = null
         }
+    })()
 
-        // Check if the response is JSON
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("Server response was not JSON");
-        }
-
-        const res = await response.json();
-
-        if (!res.url) {
-            throw new Error("Invalid response format: missing URL");
-        }
-
-        return res.url as string;
-    } catch (error) {
-        console.error("Error during payment processing:", error);
-        throw error;
-    }
+    return inFlight
 }

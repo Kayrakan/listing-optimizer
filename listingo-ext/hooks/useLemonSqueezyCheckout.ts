@@ -27,7 +27,8 @@ export function useLemonSqueezyCheckout() {
       const cents = Math.round(amountUSD * 100)
 
       // Call the API to create a checkout session
-      const response = await fetch(`${process.env.PLASMO_PUBLIC_API_URL}/api/topup/session`, {
+      const apiBase = import.meta.env.PLASMO_PUBLIC_API_BASE || "http://localhost:8000"
+      const response = await fetch(`${apiBase}/api/topup/session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

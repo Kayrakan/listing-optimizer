@@ -14,7 +14,9 @@ import {
     RefreshCcw,
     Link,
     Store,
-    Lock
+    Lock,
+    Settings,
+    BarChart3
 } from "lucide-react"
 
 import { useStore } from "~state"
@@ -25,14 +27,14 @@ import "~style.css"
 
 import { supabase }   from "~core/supabase"
 import { buyCredits } from "~core/topup"
-import { useQuotaPoll } from "~core/useQuotaPoll"   // ⬅︎ add here
+import { useQuotaPoll } from "~core/useQuotaPoll"
 
-
-// remove OverlayProps + inline component from popup.tsx
 import UpgradeOverlay from "~components/UpgradeOverlay"
 import ConnectedSources from "~components/ConnectedSources"
 import DemoTab from "~components/DemoTab"
-import SignInOverlay     from "~components/SignInOverlay"
+import SignInOverlay from "~components/SignInOverlay"
+import JobsList from "~components/JobsList"
+import ErrorBoundary from "~components/ErrorBoundary"
 
 
 
@@ -40,9 +42,7 @@ import SignInOverlay     from "~components/SignInOverlay"
  * Tab keys
  * ------------------------------------------------------------------------ */
 
-type TabKey = "demo" | "sources" | "connect"
-
-// const isGuestPlan = (p: string) => p === "guest"
+type TabKey = "demo" | "sources" | "connect" | "jobs" | "settings"
 
 const isGuestPlan = (p?: string) =>
     !p || p.toLowerCase() === "guest" || p === "free"
@@ -75,8 +75,8 @@ export default function Popup() {
     /* ---------- derived helpers ---------- */
     const isGuest = isGuestPlan(plan)
     const tabs: TabKey[] = isGuest
-        ? ["demo", "sources", "connect"]
-        : ["sources", "connect"]
+        ? ["demo", "sources", "connect", "jobs"]
+        : ["sources", "connect", "jobs", "settings"]
     const locked = isGuest && active !== "demo"
 
     /* keep user on a valid tab (if plan changes) */
@@ -169,8 +169,8 @@ export default function Popup() {
             className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 border-b-2
       transition-colors ${
                 active === tab
-                    ? "border-accent text-accent"
-                    : "border-transparent text-base-60 hover:text-base-90"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-600 hover:text-gray-900"
             }`}
         >
             <Icon className="h-5 w-5" />
@@ -181,96 +181,131 @@ export default function Popup() {
 
     /* ---------------------------------------------------------------------- */
     return (
-        <div className="relative w-[800px] max-w-none min-h-[600px] flex flex-col text-base-90 shadow-lg">
-            {/* Header */}
-            <header className="flex items-center justify-between px-4 py-3 border-b border-base-20">
-                <h1 className="font-semibold tracking-tight">Listing‑Optimizer</h1>
-                <QuotaBadge plan={plan} remaining={remaining} />
-            </header>
+        <ErrorBoundary>
+            <div className="relative w-[800px] max-w-none min-h-[600px] flex flex-col text-gray-900 shadow-lg bg-white">
+                {/* Header */}
+                <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                    <h1 className="font-semibold tracking-tight">Listing‑Optimizer</h1>
+                    <QuotaBadge plan={plan} remaining={remaining} />
+                </header>
 
-            {/* Tab nav */}
-            <nav className="flex bg-base-05">
-                {tabs.map((t) => (
-                    <NavBtn
-                        key={t}
-                        tab={t}
-                        icon={t === "demo" ? ListOrdered : t === "sources" ? Database : Plus}
-                        label={t.charAt(0).toUpperCase() + t.slice(1)}
-                    />
-                ))}
-            </nav>
+                {/* Tab nav */}
+                <nav className="flex bg-gray-50">
+                    {tabs.map((t) => (
+                        <NavBtn
+                            key={t}
+                            tab={t}
+                            icon={
+                                t === "demo" ? ListOrdered : 
+                                t === "sources" ? Database : 
+                                t === "connect" ? Plus :
+                                t === "jobs" ? BarChart3 :
+                                Settings
+                            }
+                            label={t.charAt(0).toUpperCase() + t.slice(1)}
+                        />
+                    ))}
+                </nav>
 
-            {/* Body */}
-            <main className={`flex-1 overflow-y-auto p-4 ${locked ? "filter blur-sm pointer-events-none" : ""}`}>
-                {active === "demo" && <DemoTab />}
+                {/* Body */}
+                <main className={`flex-1 overflow-y-auto p-4 ${locked ? "filter blur-sm pointer-events-none" : ""}`}>
+                    {active === "demo" && <DemoTab />}
 
-                {active === "sources" && (
-                    <section className="flex flex-col gap-4">
-                        <h2 className="font-semibold text-lg">Connected Sources</h2>
-                        {plan === "guest" ? (
-                            <div className="flex flex-col gap-4">
-                                <p className="text-sm text-base-70">
-                                    Upgrade to connect multiple stores and run bulk actions.
-                                </p>
-                                <button
-                                    onClick={() => upgrade()}
-                                    className="rounded-md bg-accent hover:bg-accent-hover text-base-00 py-2 flex items-center justify-center gap-2"
-                                >
-                                    Upgrade to Pro <ArrowRight className="h-4 w-4" />
-                                </button>
+                    {active === "sources" && (
+                        <section className="flex flex-col gap-4">
+                            <h2 className="font-semibold text-lg">Connected Sources</h2>
+                            {plan === "guest" ? (
+                                <div className="flex flex-col gap-4">
+                                    <p className="text-sm text-gray-600">
+                                        Upgrade to connect multiple stores and run bulk actions.
+                                    </p>
+                                    <button
+                                        onClick={() => upgrade()}
+                                        className="rounded-md bg-blue-600 hover:bg-blue-700 text-white py-2 flex items-center justify-center gap-2"
+                                    >
+                                        Upgrade to Pro <ArrowRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <ConnectedSources />
+                            )}
+                        </section>
+                    )}
+
+                    {active === "connect" && (
+                        <section className="flex flex-col gap-4">
+                            <h2 className="font-semibold text-lg">Connect a Store</h2>
+                            <ConnectorButton name="Etsy" onClick={() => startOAuth("etsy")} />
+                            <ConnectorButton name="Shopify" onClick={() => startOAuth("shopify")} />
+                            {/* add more platforms here */}
+                        </section>
+                    )}
+
+                    {active === "jobs" && <JobsList />}
+
+                    {active === "settings" && (
+                        <section className="flex flex-col gap-4">
+                            <h2 className="font-semibold text-lg">Settings</h2>
+                            <div className="space-y-4">
+                                <div className="p-4 border border-gray-200 rounded-lg">
+                                    <h3 className="font-medium mb-2">Account</h3>
+                                    <p className="text-sm text-gray-600 mb-3">Plan: {plan}</p>
+                                    <button
+                                        onClick={logout}
+                                        className="text-sm text-red-600 hover:text-red-700"
+                                    >
+                                        Sign out
+                                    </button>
+                                </div>
+                                
+                                <div className="p-4 border border-gray-200 rounded-lg">
+                                    <h3 className="font-medium mb-2">Credits</h3>
+                                    <p className="text-sm text-gray-600 mb-3">
+                                        {remaining} listings remaining
+                                    </p>
+                                    <button
+                                        onClick={() => upgrade()}
+                                        className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                                    >
+                                        Buy Credits
+                                    </button>
+                                </div>
                             </div>
-                        ) : (
-                            <ConnectedSources />
-                        )}
-                    </section>
+                        </section>
+                    )}
+                </main>
+
+                {/* Upgrade overlay for guests */}
+                {locked && (
+                    <UpgradeOverlay
+                        email={emailInput}
+                        setEmail={setEmailInput}
+                        buying={buying}
+                        onUpgrade={(email) => upgrade(email || emailInput)}
+                        onBack={() => setActive("demo")}
+                    />
                 )}
 
-                {active === "connect" && (
-                    <section className="flex flex-col gap-4">
-                        <h2 className="font-semibold text-lg">Connect a Store</h2>
-                        <ConnectorButton name="Etsy" onClick={() => startOAuth("etsy")} />
-                        <ConnectorButton name="Shopify" onClick={() => startOAuth("shopify")} />
-                        {/* add more platforms here */}
-                    </section>
-                )}
-            </main>
+                {showSignIn && <SignInOverlay email={emailInput} />}
 
-            {/* Upgrade overlay for guests */}
-            {locked && (
-                <UpgradeOverlay
-                    email={emailInput}
-                    setEmail={setEmailInput}
-                    buying={buying}
-                    onUpgrade={(email) => upgrade(email || emailInput)}
-                    onBack={() => setActive("demo")}
-                />
-            )}
-
-            {showSignIn && <SignInOverlay email={emailInput} />}
-
-            {/* Footer */}
-            <footer className="px-4 py-2 text-center text-xs text-base-50 border-t border-base-20">
-                © {new Date().getFullYear()} Listing‑Optimizer
-                {plan !== "guest" && (
-                    <button onClick={logout} className="ml-2 underline text-base-60 hover:text-base-90">
-                        Logout
-                    </button>
-                )}
-                {plan === 'pro' && (
-                    <button
-                        onClick={async () => {
-                            const { data } = await supabase.auth.getUser()   // v2 API
-                            const email = data.user?.email ?? ""
-                            buyCredits(10, email)        // $10 pack
-                        }}
-                        className="ml-2 rounded bg-accent px-2 py-1 text-xs text-base-00"
-                    >
-                        + $10 Credits
-                    </button>
-                )}
-
-            </footer>
-        </div>
+                {/* Footer */}
+                <footer className="px-4 py-2 text-center text-xs text-gray-500 border-t border-gray-200">
+                    © {new Date().getFullYear()} Listing‑Optimizer
+                    {plan === 'pro' && (
+                        <button
+                            onClick={async () => {
+                                const { data } = await supabase.auth.getUser()
+                                const email = data.user?.email ?? ""
+                                buyCredits(10, email)
+                            }}
+                            className="ml-2 rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+                        >
+                            + $10 Credits
+                        </button>
+                    )}
+                </footer>
+            </div>
+        </ErrorBoundary>
     )
 }
 
@@ -279,7 +314,7 @@ export default function Popup() {
 
 function ConnectorButton({ name, onClick }: { name: string; onClick: () => void }) {
     return (
-        <button onClick={onClick} className="flex items-center justify-between p-3 border border-base-20 rounded-md hover:bg-base-05">
+        <button onClick={onClick} className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
             <span>{name}</span>
             <Link className="h-4 w-4" />
         </button>

@@ -59,11 +59,19 @@ export default function DemoTab() {
                         Connect one store to see title suggestions on its top 10 listings.
                     </p>
 
-                    <button onClick={() => connect("etsy")} disabled={phase === "oauth"} className="btn-primary">
+                    <button 
+                        onClick={() => connect("etsy")} 
+                        disabled={phase === "oauth"} 
+                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-4 rounded-md font-medium transition-colors"
+                    >
                         {phase === "oauth" ? "Waiting for OAuth…" : "Connect Etsy"}
                     </button>
 
-                    <button onClick={() => connect("shopify")} disabled={phase === "oauth"} className="btn-secondary">
+                    <button 
+                        onClick={() => connect("shopify")} 
+                        disabled={phase === "oauth"} 
+                        className="w-full bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white py-2 px-4 rounded-md font-medium transition-colors"
+                    >
                         Connect Shopify
                     </button>
                 </>
@@ -77,7 +85,11 @@ export default function DemoTab() {
                         </button>
                     </div>
 
-                    <button onClick={runDemo} disabled={phase === "scanning"} className="btn-accent flex items-center justify-center gap-2">
+                    <button 
+                        onClick={runDemo} 
+                        disabled={phase === "scanning"} 
+                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
+                    >
                         {phase === "scanning" && <RefreshCcw className="h-4 w-4 animate-spin" />}
                         {phase === "scanning" ? "Scanning…" : "Run demo on 10 listings"}
                     </button>

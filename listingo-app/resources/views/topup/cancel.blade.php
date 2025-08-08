@@ -1,3 +1,21 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Top-up Cancelled</title>
+    <link rel="icon" href="/favicon.ico" />
+    <style>body{font-family:ui-sans-serif,system-ui;max-width:720px;margin:4rem auto;padding:0 1rem}</style>
+    <script>
+        window.opener && window.opener.postMessage({ type: 'lemonsqueezy:cancel' }, '*')
+    </script>
+</head>
+<body>
+    <h1>Payment cancelled</h1>
+    <p>No charges were made. You may close this tab.</p>
+</body>
+</html>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

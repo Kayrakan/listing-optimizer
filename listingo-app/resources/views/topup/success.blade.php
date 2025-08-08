@@ -1,3 +1,28 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Top-up Success</title>
+    <link rel="icon" href="/favicon.ico" />
+    <style>body{font-family:ui-sans-serif,system-ui;max-width:720px;margin:4rem auto;padding:0 1rem}</style>
+    <script>
+        // Notify extension via postMessage so it can close the tab
+        window.opener && window.opener.postMessage({ type: 'lemonsqueezy:success' }, '*')
+    </script>
+    <script>
+        // redirect back to extension's return url if provided as query
+        const params = new URLSearchParams(location.search)
+        const r = params.get('return')
+        if (r) location.href = r
+    </script>
+    </head>
+<body>
+    <h1>Payment successful</h1>
+    <p>Your credits will be available momentarily. You may close this tab.</p>
+</body>
+</html>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

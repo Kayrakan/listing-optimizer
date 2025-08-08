@@ -10,15 +10,21 @@ class QuotaController extends Controller
     //
     public function show(Request $request)
     {
-        // The Supabase-JWT middleware already set the claims on the request:
         $claims = $request->attributes->get('supabase_claims');
 
-        // For guest (HS256) tokens we don't have Supabase claims,
-        // so fall back to our own HS payload parsed in middleware
-        $userId = $claims->sub ?? $request->attributes->get('guest_sub');
-
-        /** @var User $user */
-        $user = User::findOrFail($userId);
+        $user = null;
+        if ($claims && isset($claims->email)) {
+            $user = User::where('email', $claims->email)->first();
+        }
+        if (!$user) {
+            $guestSub = $request->attributes->get('guest_sub');
+            if ($guestSub) {
+                $user = User::find($guestSub);
+            }
+        }
+        if (!$user) {
+            abort(404);
+        }
 
         return response()->json([
             'plan'      => $user->plan,              // guest | pro
